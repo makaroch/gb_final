@@ -10,5 +10,6 @@ class RequestPars:
     search: str = " "
     sorting: Sorts = Sorts.popular
     delivery_time: DeliveryTime = DeliveryTime.five_days
-    min_price: int = 1_00
-    max_prise: int = 10_000_00
+    min_price: int = 100
+    max_prise: int = 1000000
+    quantity: int = 10
