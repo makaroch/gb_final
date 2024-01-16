@@ -15,20 +15,19 @@ async def root():
 
 
 @app.get("/wb_product")
-def get_wb_product(search: str, city: str = "Москва",
+async def get_wb_product(search: str, city: str = "Москва",
                          sorting: Sorts = Sorts.popular,
                          delivery_time: DeliveryTime = DeliveryTime.five_days,
                          min_price: int = 100,
                          max_prise: int = 1000000,
                          quantity: int = 10) -> list[ProductCard]:
-    return WildberriesParser(RequestPars(
+    return await WildberriesParser(RequestPars(
         search=search, sorting=sorting, delivery_time=delivery_time,
-        min_price=min_price, max_prise=max_prise, quantity=quantity, city=city
+        min_price=min_price, max_prise=max_prise, quantity=quantity, city=city.lower()
     )).get_data()
 
 
 if __name__ == "__main__":
-    # noinspection PyInterpreter
     uvicorn.run(app=app,
                 host='127.0.0.1',
                 port=80

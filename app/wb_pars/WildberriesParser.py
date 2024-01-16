@@ -1,5 +1,5 @@
 from typing import List
-
+import asyncio
 import requests
 
 from app.iParser import IParser
@@ -12,9 +12,15 @@ class WildberriesParser(IParser):
     def __init__(self, search_query):
         self.__search_query: RequestPars = search_query
         self.__geo_loc = GetDestPoint()
+        self.__point_issue_info: PointIssueInfo | None = None
 
-    def __pars(self) -> dict:
-        self.__point_issue_info: PointIssueInfo = self.__geo_loc.get_dest(self.__search_query.city.lower())
+    async def __get_geo_data(self):
+        self.__point_issue_info: PointIssueInfo = await self.__geo_loc.get_dest(self.__search_query.city)
+
+    async def __pars(self) -> dict:
+
+        await asyncio.gather(asyncio.create_task(self.__get_geo_data()))
+
         print(self.__point_issue_info)
         min_prace: int = self.__search_query.min_price
         max_prace: int = self.__search_query.max_prise
@@ -28,7 +34,7 @@ class WildberriesParser(IParser):
 
         return requests.get(url).json()
 
-    def __create_img_link(self, _id: int) -> str:
+    async def __create_img_link(self, _id: int) -> str:
         _id = int(_id)
         _short_id = _id // 100000
         if 0 <= _short_id <= 143:
@@ -59,7 +65,7 @@ class WildberriesParser(IParser):
             basket = '13'
         return f"https://basket-{basket}.wbbasket.ru/vol{_short_id}/part{_id // 1000}/{_id}/images/big/1.webp"
 
-    def __pars_response(self, raw_response: dict) -> List[ProductCard]:
+    async def __pars_response(self, raw_response: dict) -> List[ProductCard]:
         lst = []
         products: list = raw_response.get("data").get("products")
 
@@ -72,16 +78,14 @@ class WildberriesParser(IParser):
                 feedbacks=product.get("feedbacks"),
                 date_delivery=self.__search_query.delivery_time.name,
                 link=f"https://www.wildberries.ru/catalog/{product.get('id')}/detail.aspx",
-                img=self.__create_img_link(product.get('id'))
+                img=await self.__create_img_link(product.get('id'))
             )
             lst.append(prod_card)
 
         return lst
 
-    def get_data(self):
-        raw_response: dict = (self.__pars())
+    async def get_data(self):
+        raw_response: dict = await self.__pars()
         if len(raw_response) == 0 or len(raw_response.get("data").get("products")) == 0:
             return {}
-        return self.__pars_response(raw_response)
-
-
+        return await self.__pars_response(raw_response)

@@ -1,16 +1,17 @@
-from time import sleep
-from playwright.sync_api import sync_playwright
+import asyncio
+
+from playwright.async_api import async_playwright, Playwright
 
 from app.core.PointIssueInfo import PointIssueInfo
 
 
 def caching(funk):
-    __cache: dict[str | PointIssueInfo] = {}
+    __cache: dict[str, PointIssueInfo] = {}
 
-    def inner(*args, **kwargs):
+    async def inner(*args, **kwargs):
         if args[1] in __cache:
             return __cache.get(args[1])
-        __cache[args[1]] = funk(*args, **kwargs)
+        __cache[args[1]] = await funk(*args, **kwargs)
         return __cache.get(args[1])
 
     return inner
@@ -21,19 +22,18 @@ class GetDestPoint:
         self.__url: str = "https://www.wildberries.ru/"
         self.__raw_dest: dict = {}
 
-    def __get_log(self, msg):
+    async def __get_log(self, msg):
         result = []
         for arg in msg.args:
-            result.append(dict(arg.json_value()))
+            result.append(await arg.json_value())
         self.__raw_dest = result[0]
-
-    def __pars_log(self) -> PointIssueInfo:
+    async def __pars_log(self) -> PointIssueInfo:
         return PointIssueInfo(latitude=self.__raw_dest["geometry"]["coordinates"][0],
                               longitude=self.__raw_dest["geometry"]["coordinates"][1],
                               dest=self.__raw_dest["properties"]["pooData"]["dest"])
 
     @caching
-    def get_dest(self, city_name: str) -> PointIssueInfo:
+    async def get_dest(self, city_name: str) -> PointIssueInfo:
         """получить по названию города dest(нужен для определения сроков доставки)"""
         print(city_name)
         if city_name == "москва":
@@ -43,29 +43,29 @@ class GetDestPoint:
                 dest="-1257786",
             )
 
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
-            context = browser.new_context()
-            page = context.new_page()
-            page.goto(self.__url)
-            sleep(3)
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch()
+            context = await browser.new_context()
+            page = await context.new_page()
+            await page.goto(self.__url)
+            await asyncio.sleep(2)
 
-            page.click(".simple-menu__link")  # открытие карты для выбора точки
-            page.wait_for_selector(".ymaps-2-1-79-searchbox-input__input")
-            page.query_selector(".ymaps-2-1-79-searchbox-input__input").type(text=city_name,
-                                                                             delay=0.3)  # ввод гороа
+            await page.click(".simple-menu__link")  # открытие карты для выбора точки
+            await page.wait_for_selector(".ymaps-2-1-79-searchbox-input__input")
+            search_element = await page.query_selector(".ymaps-2-1-79-searchbox-input__input")
+            await search_element.type(text=city_name, delay=0.3)  # ввод гороа
             # выераем первый в списке
-            page.keyboard.press("ArrowDown")
-            page.keyboard.press("Enter")
+            await page.keyboard.press("ArrowDown")
+            await page.keyboard.press("Enter")
             # еше раз выберам город
-            page.wait_for_selector(".ymaps-2-1-79-islets__first")
-            page.click(".ymaps-2-1-79-islets__first")
-            sleep(1)
+            await page.wait_for_selector(".ymaps-2-1-79-islets__first")
+            await page.click(".ymaps-2-1-79-islets__first")
+            # await asyncio.sleep(1)
 
             # ждем когда закрузяться ПВЗ кликакаем на первый в списке
-            page.wait_for_selector(".address-item__wrap")
+            await page.wait_for_selector(".address-item__wrap")
             page.on("console", self.__get_log)
-            page.click(".address-item__wrap")
+            await page.click(".address-item__wrap")
+            await browser.close()
 
-            self.__pars_log()
-        return self.__pars_log()
+        return await self.__pars_log()
