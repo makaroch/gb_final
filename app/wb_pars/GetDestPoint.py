@@ -1,7 +1,7 @@
 from time import sleep
 from playwright.sync_api import sync_playwright
 
-from core.PointIssueInfo import PointIssueInfo
+from app.core.PointIssueInfo import PointIssueInfo
 
 
 def caching(funk):
@@ -35,6 +35,7 @@ class GetDestPoint:
     @caching
     def get_dest(self, city_name: str) -> PointIssueInfo:
         """получить по названию города dest(нужен для определения сроков доставки)"""
+        print(city_name)
         if city_name == "москва":
             return PointIssueInfo(
                 latitude=55.753493,
@@ -43,7 +44,7 @@ class GetDestPoint:
             )
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=False)
+            browser = playwright.chromium.launch()
             context = browser.new_context()
             page = context.new_page()
             page.goto(self.__url)

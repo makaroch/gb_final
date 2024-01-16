@@ -1,21 +1,21 @@
 from typing import List
 
 import requests
-import pprint
 
-from core.ProductСard import ProductCard
-from iParser import IParser
-from core.RequestPars import RequestPars
-from core.PointIssueInfo import PointIssueInfo
-from wb_pars.GetDestPoint import GetDestPoint
+from app.iParser import IParser
+from app.core.model import RequestPars, ProductCard
+from app.core.PointIssueInfo import PointIssueInfo
+from app.wb_pars.GetDestPoint import GetDestPoint
 
 
 class WildberriesParser(IParser):
     def __init__(self, search_query):
         self.__search_query: RequestPars = search_query
+        self.__geo_loc = GetDestPoint()
 
     def __pars(self) -> dict:
-        self.__point_issue_info: PointIssueInfo = GetDestPoint().get_dest(self.__search_query.city.lower())
+        self.__point_issue_info: PointIssueInfo = self.__geo_loc.get_dest(self.__search_query.city.lower())
+        print(self.__point_issue_info)
         min_prace: int = self.__search_query.min_price
         max_prace: int = self.__search_query.max_prise
         query: str = self.__search_query.search
