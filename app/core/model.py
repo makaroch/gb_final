@@ -14,6 +14,10 @@ class RequestPars(BaseModel):
     quantity: int = 10
 
 
+class RequestParsMany(RequestPars):
+    search: list[str]
+
+
 class ProductCard(BaseModel):
     name: str
     price: float

@@ -1,6 +1,7 @@
 from typing import List
 import asyncio
-import requests
+
+import aiohttp
 
 from app.iParser import IParser
 from app.core.model import RequestPars, ProductCard
@@ -15,24 +16,29 @@ class WildberriesParser(IParser):
         self.__point_issue_info: PointIssueInfo | None = None
 
     async def __get_geo_data(self):
-        self.__point_issue_info: PointIssueInfo = await self.__geo_loc.get_dest(self.__search_query.city)
+        self.__point_issue_info: PointIssueInfo = await self.__geo_loc.get_dest(self.__search_query.city.lower())
 
-    async def __pars(self) -> dict:
+    async def __configure_url(self, dest, min_price, max_price, dlvr, query, sort):
+        return (f"https://search.wb.ru/exactmatch/ru/common/v4/search?TestGroup=control&TestID=391&appType=1"
+                f"&curr=rub&dest={dest}&priceU={min_price};{max_price}&fdlvr={dlvr}&page=1"
+                f"&query={query}&resultset=catalog&sort={sort}&spp=29&suppressSpellcheck=false")
 
+    async def __pars_geo(self) -> None:
         await asyncio.gather(asyncio.create_task(self.__get_geo_data()))
 
-        print(self.__point_issue_info)
-        min_prace: int = self.__search_query.min_price
-        max_prace: int = self.__search_query.max_prise
-        query: str = self.__search_query.search
-        sort: str = self.__search_query.sorting.value
-        dlvr = self.__search_query.delivery_time.value
+    async def __api_wb_request(self) -> dict:
+        url = await self.__configure_url(min_price=self.__search_query.min_price,
+                                         max_price=self.__search_query.max_prise,
+                                         query=self.__search_query.search,
+                                         sort=self.__search_query.sorting.value,
+                                         dlvr=self.__search_query.delivery_time.value,
+                                         dest=self.__point_issue_info.dest)
 
-        url = (f"https://search.wb.ru/exactmatch/ru/common/v4/search?TestGroup=control&TestID=391&appType=1"
-               f"&curr=rub&dest={self.__point_issue_info.dest}&priceU={min_prace};{max_prace}&fdlvr={dlvr}&page=1"
-               f"&query={query}&resultset=catalog&sort={sort}&spp=29&suppressSpellcheck=false")
+        async with aiohttp.ClientSession() as session:
+            task = asyncio.create_task(session.get(url))
 
-        return requests.get(url).json()
+            responses = await asyncio.gather(task)
+            return [await r.json(content_type=None) for r in responses][0]
 
     async def __create_img_link(self, _id: int) -> str:
         _id = int(_id)
@@ -84,8 +90,32 @@ class WildberriesParser(IParser):
 
         return lst
 
-    async def get_data(self):
-        raw_response: dict = await self.__pars()
+    async def get_one_product(self):
+        await self.__pars_geo()
+        raw_response = await self.__api_wb_request()
+
         if len(raw_response) == 0 or len(raw_response.get("data").get("products")) == 0:
             return {}
+
         return await self.__pars_response(raw_response)
+
+    async def get_many_product(self):
+        await self.__pars_geo()
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for search in self.__search_query.search:
+                tasks.append(asyncio.create_task(session.get(await self.__configure_url(
+                    min_price=self.__search_query.min_price,
+                    max_price=self.__search_query.max_prise,
+                    query=search,
+                    sort=self.__search_query.sorting.value,
+                    dlvr=self.__search_query.delivery_time.value,
+                    dest=self.__point_issue_info.dest))))
+
+            responses = await asyncio.gather(*tasks)
+            result_responses = [await r.json(content_type=None) for r in responses]
+        res = []
+        for item in result_responses:
+            res.append(await self.__pars_response(item))
+        return res
+

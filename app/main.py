@@ -1,9 +1,11 @@
+from pprint import pprint
+
 import uvicorn
 from fastapi import FastAPI
 
 from app.core.eDeliveryTime import DeliveryTime
 from app.core.eSorting import Sorts
-from app.core.model import ProductCard, RequestPars
+from app.core.model import ProductCard, RequestPars, RequestParsMany
 from app.wb_pars.WildberriesParser import WildberriesParser
 
 app = FastAPI()
@@ -20,11 +22,16 @@ async def get_wb_product(search: str, city: str = "Москва",
                          delivery_time: DeliveryTime = DeliveryTime.five_days,
                          min_price: int = 100,
                          max_prise: int = 1000000,
-                         quantity: int = 10) -> list[ProductCard]:
-    return await WildberriesParser(RequestPars(
-        search=search, sorting=sorting, delivery_time=delivery_time,
-        min_price=min_price, max_prise=max_prise, quantity=quantity, city=city.lower()
-    )).get_data()
+                         quantity: int = 10) -> list[ProductCard] | list:
+    return await WildberriesParser(
+        RequestPars(search=search, sorting=sorting, delivery_time=delivery_time,
+                    min_price=min_price, max_prise=max_prise, quantity=quantity, city=city.lower())).get_one_product()
+
+
+@app.post("/wb_products")
+async def get_wb_products(request: RequestParsMany) -> list[list[ProductCard]]:
+    return await WildberriesParser(request).get_many_product()
+
 
 
 if __name__ == "__main__":

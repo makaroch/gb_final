@@ -35,7 +35,6 @@ class GetDestPoint:
     @caching
     async def get_dest(self, city_name: str) -> PointIssueInfo:
         """получить по названию города dest(нужен для определения сроков доставки)"""
-        print(city_name)
         if city_name == "москва":
             return PointIssueInfo(
                 latitude=55.753493,
@@ -67,5 +66,4 @@ class GetDestPoint:
             page.on("console", self.__get_log)
             await page.click(".address-item__wrap")
             await browser.close()
-
         return await self.__pars_log()
