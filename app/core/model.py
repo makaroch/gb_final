@@ -19,10 +19,10 @@ class RequestParsMany(RequestPars):
 
 
 class ProductCard(BaseModel):
-    name: str
-    price: float
-    rate: float
-    feedbacks: int
-    date_delivery: str
-    link: str
-    img: str = None
+    name: str = "Product name"
+    price: float = 1500
+    rate: float = 4.5
+    feedbacks: int = 500
+    date_delivery: str = "two_days"
+    link: str = "https://gas-kvas.com/grafic/uploads/posts/2023-09/1695931386_gas-kvas-com-p-kartinki-s-kotami-18.jpg"
+    img: str = "https://gas-kvas.com/grafic/uploads/posts/2023-09/1695931386_gas-kvas-com-p-kartinki-s-kotami-18.jpg"
