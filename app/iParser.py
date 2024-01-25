@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 
+from app.core.model import ProductCard
+
 
 class IParser(ABC):
     @abstractmethod
-    def get_one_product(self):
+    async def get_one_product(self) -> list[ProductCard]:
         pass
 
     @abstractmethod
-    def get_many_product(self):
+    async def get_many_product(self):
         pass

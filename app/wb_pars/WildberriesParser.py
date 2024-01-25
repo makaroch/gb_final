@@ -73,6 +73,9 @@ class WildberriesParser(IParser):
 
     async def __pars_response(self, raw_response: dict) -> List[ProductCard]:
         lst = []
+        if len(raw_response) == 0:
+            lst.append(dict())
+            return lst
         products: list = raw_response.get("data").get("products")
 
         for i in range(self.__search_query.quantity):
@@ -95,7 +98,7 @@ class WildberriesParser(IParser):
         raw_response = await self.__api_wb_request()
 
         if len(raw_response) == 0 or len(raw_response.get("data").get("products")) == 0:
-            return {}
+            return [{}]
 
         return await self.__pars_response(raw_response)
 
